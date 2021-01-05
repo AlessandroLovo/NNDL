@@ -1,0 +1,28 @@
+\documentclass[a4paper, 11pt]{article}
+\usepackage[english]{babel}
+\input{"/media/alessandro/OS/Users/ale57/Documents/1. universita'/ANNO IV (2019-2020)/second semester/header.tex"}
+
+\begin{document}
+
+\title{NNDL: Homework 1 \\ Supevised Deep Learning}
+\author{Alessandro Lovo}
+\maketitle
+
+\section{Introduction}
+  This homework consists in applying supervised deep learning to two tasks: a regression task consisting in approximating a scalar function of a scalar variable and a classification task that is recognizing the handwritten digits of the MNIST dataset. For the regression task a fully connected network (FCN) will be used, while for the classification task both a fully connected but most importantly a convolutional network (CNN) will be tested. In both cases different architectures, optimization and visualization techniques and hyperparameter search will be tried.
+
+  \subsection{General framework}
+    Both tasks rely on a framework of python classes that unfolds as follows:
+    \begin{itemize}
+      \item \textbf{Net}: class inheriting from \emph{torch.nn.Module} that contains the actual neural network with a specific architecture.
+      \item \textbf{Evolver}: class for handling the training and validation of a \emph{Net}. In this class there is a check at the end of every training epoch to interrupt the learning process. To implement early stopping one just needs to inherit from the \emph{Evolver} class and specify that check condition. In particular the learning process stops if the validation loss isn't decreasing after \emph{patience} number of epochs.
+      \item \textbf{KFoldCrossValidator}: class for performing k fold cross validation on a particular set of hyperparameters.
+    \end{itemize}
+
+\section{Regression task}
+
+
+
+
+
+\end{document}

@@ -1,0 +1,10 @@
+#!bin/sh
+
+cd HW$1
+nautilus . &
+atom Report &
+
+
+conda activate torch
+echo ; echo activating torch environment ; echo ; echo
+jupyter-notebook --NotebookApp.allow_origin='https://colab.research.google.com' --port=9090 --NotebookApp.port_retries=0 --no-browser

@@ -1,0 +1,2 @@
+,Nh1,Nh2,Nh3,Nh4,activation_function,lr,weight_decay,train_batch_size,patience,avg_train_loss,avg_val_loss
+0,256,16,64,32,ReLU(),0.01,0.001,30,500,0.1936491,0.29968366
