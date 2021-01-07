@@ -1,7 +1,6 @@
 #!bin/sh
 
 cd HW$1
-nautilus . &
 atom Report &
 
 

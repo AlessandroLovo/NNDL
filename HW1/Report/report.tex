@@ -20,6 +20,43 @@
     \end{itemize}
 
 \section{Regression task}
+  \subsection{Basic solution}
+    The data for this task consists in 100 points for training, arranged in such a way to leave two 'gaps' (fig \ref{fig:r:basic} b), and 100 test points that fill the gaps, allowing to test how good the net is in generalizing its learning.
+
+    As a basic solution I implemented a two layered FCN with 128 neurons per hidden layer, the sigmoid as activation function and trained it for 2000 epochs using the Adam optimizer with learning rate set to $10^{-3}$ and a batch size of 10 datapoints. The loss function used is the mean square error (MSE) and 10\% of training data is used for validation. In fig \ref{fig:r:basic} are shown the results and one can see that the model is, unsurprisingly, not very good. In particular the validation loss started to increase just after 500 epochs and still there is some underfitting on the training data.
+    To solve these issues one requires both a more complex model and some regularization techniques.
+
+    \begin{figure}
+      \centering
+      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/regression/basic_loss.png}} \quad
+      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/regression/basic_plot.png}}
+      \caption{Results of the basic solution: training and validation loss as a function of epoch number (a) and Output of the trained network compared with training, validation and test datapoints (b).}
+      \label{fig:r:basic}
+    \end{figure}
+
+  \subsection{More advanced methods}
+    Since there is quite few training data, the result is highly dependent on the train-validation split, so to improve this in the followinig every set of hyperparameters will be tested with a 5-fold setup. Also it is worth introducing the early stopping in order to not lose time on unpromising runs.
+    Moreover this allows to increase the maximum number of epochs for example to $10^4$ without worrying about overfitting.
+    At this point one can test different architectures (2, 3 or 4 layers with or without dropout and different activation functions: Sigmoid, ReLU or Tanh) and optimization procedure (momentum for the SGD optimizer and weight decay for the Adam optimizer).
+
+    Since the number of combinations of hyperparameters rockets, it would be better to rule out some of these possibilities.
+    In particular Adam yields reliably better results than SGD with momentum, and also the Sigmoid activation function frequently yields a heavy underfitting. Furthermore a network with 4 layers doesn't seem to perform better than a 3-layered one.
+
+    At this points the remaining degrees of freedom are the following, and for each of them I provided a list of possibilities to be tested in a random search
+    \begin{itemize}
+      \item the number of neurons in each layer: [16, 32, 64, 128, 256]
+      \item dropout probabilities: [0, 0.15, 0.35, 0.5]
+      \item activation function: [Tanh, ReLU]
+      \item learning rate and weight decay for the Adam optimizer: respectively [0.1, 0.01, 0.001, 0.0001] and [0, 0.1, 0.001, $10^{-5}$]
+      \item patience parameter for the early stopping: [10, 100, 1000]
+      \item training batch size: [5, 10, 25, 50]
+    \end{itemize}
+
+
+
+
+
+
 
 
 
