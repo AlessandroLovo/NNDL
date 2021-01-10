@@ -1,5 +1,6 @@
 \documentclass[a4paper, 11pt]{article}
 \usepackage[english]{babel}
+\usepackage{appendix}
 \input{"/media/alessandro/OS/Users/ale57/Documents/1. universita'/ANNO IV (2019-2020)/second semester/header.tex"}
 
 \begin{document}
@@ -35,22 +36,63 @@
     \end{figure}
 
   \subsection{More advanced methods}
-    Since there is quite few training data, the result is highly dependent on the train-validation split, so to improve this in the followinig every set of hyperparameters will be tested with a 5-fold setup. Also it is worth introducing the early stopping in order to not lose time on unpromising runs.
-    Moreover this allows to increase the maximum number of epochs for example to $10^4$ without worrying about overfitting.
+    Since there is quite few training data, the result is highly dependent on the train-validation split, so to improve this in the followinig every set of hyperparameters will be tested with a 5-fold setup.
+    Also it is worth introducing the early stopping in order to be able to increase the maximum number of epochs (for example to $10^4$) without worrying about overfitting. In practice this is implemented creating a checkpoint for the network every time the validation loss reaches a new minimum; if there is no new minimum after \emph{patience} epochs, learning stops and the net is reverted back to the last checkpoint.
     At this point one can test different architectures (2, 3 or 4 layers with or without dropout and different activation functions: Sigmoid, ReLU or Tanh) and optimization procedure (momentum for the SGD optimizer and weight decay for the Adam optimizer).
 
     Since the number of combinations of hyperparameters rockets, it would be better to rule out some of these possibilities.
-    In particular Adam yields reliably better results than SGD with momentum, and also the Sigmoid activation function frequently yields a heavy underfitting. Furthermore a network with 4 layers doesn't seem to perform better than a 3-layered one.
+    In particular Adam yields reliably better results than SGD with momentum, and also the Sigmoid activation function frequently yields a heavy underfitting. Also having a too small training batch size makes the learning process very unstable and on average a 4-layered network performs better than a 3-layered one. So, the architecture to be tested now is a network with 4 hidden linear layers, where the second and third one are followed by a dropout layer.
 
     At this points the remaining degrees of freedom are the following, and for each of them I provided a list of possibilities to be tested in a random search
     \begin{itemize}
-      \item the number of neurons in each layer: [16, 32, 64, 128, 256]
+      \item the number of neurons in each layer: [8, 16, 32, 64, 128, 256]
       \item dropout probabilities: [0, 0.15, 0.35, 0.5]
       \item activation function: [Tanh, ReLU]
-      \item learning rate and weight decay for the Adam optimizer: respectively [0.1, 0.01, 0.001, 0.0001] and [0, 0.1, 0.001, $10^{-5}$]
-      \item patience parameter for the early stopping: [10, 100, 1000]
-      \item training batch size: [5, 10, 25, 50]
+      \item learning rate and weight decay for the Adam optimizer: respectively [$10^{-4}$, $5\cdot10^{-4}$, 0.001, 0.005, 0.01, 0.05] and [0, $10^{-5}$, $5\cdot10^{-5}$, $10^{-4}$, $5\cdot10^{-4}$, 0.001]
+      \item patience parameter for the early stopping: [100, 200, 300, 400]
+      \item training batch size: [20, 30, 40, 50]
     \end{itemize}
+    To speed up the random search I also implemented trial pruning, i.e., if in one of the first three folds the validation loss is above 0.4, the remaining folds are not computed, directly testing the next hyperparameter combination and thus saving time.
+
+  \subsection{Results}
+    After 65 non pruned iterations of the random search the best hyperparameter combination is found in hidden layers with 32, 128, 64, 256 neurons, with 0.5 dropout probability after the second layer and Tanh as activation function, trained with learning rate of 0.001, no weight decay, a train batch size of 30 and patience of 400, resulting in an average validation loss of 0.227.
+    Since during the random search networks weren't saved, now I performed a final 5-fold run with the best hyperparameters and select the best of the five nets obtaining the results in fig \ref{fig:r:best}. If one compares with the basic solution this one doesn't seem much better, however by comparing the two test losses, the best net performs quite better, proving to be more able to generalize than the basic one (tab \ref{tab:r:losses}).
+
+    If one visualizes the weight histogram of the weights can see that, due to the lack of weight decay, the weights are not very peaked around 0, and also the distribution is broader on the second layer, where dropout was applied. On the other hand the activation profiles are not very interpretable (fig \ref{fig:r:visualization}).
+
+    \begin{figure}
+      \centering
+      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/regression/best_loss.png}} \quad
+      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/regression/best_plot.png}}
+      \caption{Results of the best network: training and validation loss as a function of epoch number (a) and Output of the trained network compared with training/validation in blue and test datapoints in red (b).}
+      \label{fig:r:best}
+    \end{figure}
+
+    \begin{table}
+      \centering
+      \begin{tabular}{c|ccc}
+        Net & Training loss & Validation loss & Test loss \\
+        \midrule
+        Basic & 0.2418 & 0.2375 & 0.3417 \\
+        Best & 0.3008 & 0.1822 & 0.1216
+      \end{tabular}
+      \caption{Comparison of the losses of the basic and best net.}
+      \label{tab:r:losses}
+    \end{table}
+
+    \begin{figure}
+      \centering
+      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/regression/best_w.png}} \quad
+      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/regression/best_act.png}}
+      \caption{Visualization of the weights and activations of the best net.}
+      \label{fig:r:visualization}
+    \end{figure}
+
+
+\section{Classification task}
+  \subsection{Basic solution}
+
+
 
 
 
