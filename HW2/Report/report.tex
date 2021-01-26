@@ -1,14 +1,91 @@
 \documentclass[a4paper, 11pt]{article}
 \usepackage[english]{babel}
-\usepackage{appendices}
+\usepackage{appendix}
 \input{"/media/alessandro/OS/Users/ale57/Documents/1. universita'/ANNO IV (2019-2020)/second semester/header.tex"}
 
 \begin{document}
 
-\title{}
+\title{NNDL: Homework 2 \\ Unsupervised Deep Learning}
 \author{Alessandro Lovo}
-
 \maketitle
+
+\section{Introduction}
+  This homework will deal with unsupervised deep learning applied to MNIST dataset of handwritten digits. The focus will be on different architectures of convolutional autoencoders for both classification and image generation problems. In the end also Generative Adversarial Networks (GAN) will be tested.
+
+  \subsection{General framework}
+  Network architectures and training procedures rely on a framework of python classes that unfolds as follows:
+  \begin{itemize}
+    \item \textbf{Encoder}: class inheriting from \emph{torch.nn.Module} that contains the specific architecture of the first part of the autoencoder: it consists in a block of convolutional layers followed by one of fully connected layers. It receives as input a 28 by 28 pixel gray scale image and outputs $N_{latent}$ real numbers.
+    \item \textbf{Decoder}: counterpart of the encoder: it takes as input $N_{latent}$ real numbers, passes them through a block of linear layers and one of transposed convolutional layers outputting a 28 by 28 gray scale image.
+    \item \textbf{Evolver}: class for handling the training and validation of a general list of concatenated networks, in particular here the list is a \emph{Encoder} followed by a \emph{Decoder}. In this class there is a check at the end of every training epoch to interrupt the learning process. To implement early stopping one just needs to inherit from the \emph{Evolver} class and specify that check condition. In particular the learning process stops if the validation loss isn't decreasing after \emph{patience} number of epochs.
+    \item \textbf{KFoldCrossValidator}: class for performing k fold cross validation on a particular set of hyperparameters.
+  \end{itemize}
+
+
+\section{Convolutional autoencoders}
+  For simplicity I restricted the hyperparameter space to symmetric autoencoders, i.e. the decoder is a 'mirrored' version of the encoder. For this reason I will point out only the encoder hyperparameters.
+  \subsection{Basic solution}
+    The structure of this autoencoder is very similar to the one seen in the Lab practices: 3 convolutional layers with number of channels [8, 16, 32], kernel sizes of 3, strides of 2, paddings [1, 1, 0]; then 2 linear layers with 128 and 16 neurons and finally an output layer with $N_{latent} = 4$ neurons. The activation functions between all layers are ReLU and this architecture is trained for 100 epochs with the Adam optimizer with learning rate $10^{-3}$ and weight decay $10^{-5}$ with a batch size of 256 and a 80\%-20\% train validation split of the 60000 training samples. The loss function is the mean square error (MSE) between the original and reconstructed image.
+
+    As we can see from fig \ref{fig:basic} there is no definite convergence, as the loss slowly keeps decreasing, moreover training and validation loss are virtually identical, showing there is no overfitting.
+
+    \begin{figure}
+      \centering
+      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/basic_loss.png}} \,
+      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/basic/epoch_20.png}} \\
+      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/basic/epoch_51.png}} \,
+      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/basic/epoch_98.png}}
+      \caption{Behavior of training and validation loss during learning and some examples of original versus reconstructed images (at epochs 20, 51 and 98).}
+      \label{fig:basic}
+    \end{figure}
+
+\subsection{More advanced methods}
+  In the basic example we witnessed a pretty slow convergence to pretty mediocre results: to improve both speed and reconstruction error one needs better architectures and training methods. First of all instead of the MSE loss it is better to use the Binary Cross Entropy (BCE) loss; then I also implemented early stopping, checkpointing the nets back to when the validation loss was at its minimum if after \emph{patience} epochs the validation loss didn't reach a new minimum. At this point I tried more advanced strategies:
+
+  \begin{itemize}
+    \item \textbf{Pruning}: every \emph{prune\_every} epochs the \emph{amount} fraction of the weights of the nets that have the lowest L1 norm are set to zero. The \emph{amounts} are potentially different between linear and convolutional layers and between decoder and encoder. Usually the amounts for the convolutional layers are lower.
+    \item \textbf{Dropout}: adding a dropout layer before every hidden linear layer of the nets. Experimenting a bit I found that the nets perform better when dropout is applied only to the encoder.
+    \item \textbf{Iterative autoencoding}: up to now we considered only the error between the original image and the first reconstruction. Here I tried to add to the loss also the error between the original image and second and third reconstructions, namely feeding the output of the decoder back to the encoder. However this slowed considerably the training process with yielding considerably better results.
+  \end{itemize}
+
+  At this point I proceeded to a hyperparameter search over the following degrees of freedom:
+  \begin{itemize}
+    \item Number of convolutional layers: 2, 3 or 4
+    \item Number of channels: from 4 to $4\cdot2^j$ for the $j^{th}$ convolutional layer
+    \item Kernel size: from 2 to 6. Stride: from 1 to 4. Padding: from 0 to half of the kernel size
+    \item Number of fully connected hidden layers: 1, 2 or 3
+    \item Number of neurons: from 8 $\frac[f]{512}{2^j}$ for the $j^{th}$ layer
+    \item Dropout probability: from 0 to 0.7
+    \item $N_{latent}$: from 1 to 16
+    \item Optimizer learning rate (from $10^{-5}$ to $10^{-1}$) and weight decay (from $10^{-7}$ to $10^{-1}$)
+    \item train batch size (from 64 to 512) and \emph{patience} for early stopping (from 4 to 16)
+    \item \emph{prune\_every}: never or from 1 to 10 and the four pruning \emph{amounts} from 0 to 0.5
+  \end{itemize}
+
+  The search was performed with \emph{optuna} at its default setting using a 5 fold cross validation for every hyperparameter combination and adding to average validation loss a penalty of $10^{-5}$ times the average training time in minutes plus $10^{-2} \cdot N_{latent}$ as regularizing terms.
+
+  After 60 trials, half of which were pruned due to an invalid net architecture, the best hyperparameters are 3 convoultional layers with channels [6,12,17], kernel sizes [2,2,3], strides [1,1,3], paddings [1,0,1]; a single hidden linear layer with 57 neurons and after a dropout layer with probability 0.1905 and $N_{latent} = 6$; learinig rate of $2.89\cdot10^{-3}$, weight decay of $6.51\cdot10{-7}$, patience of 13 and train batch size of 383. The net is pruned every 5 eopchs with amounts [0.398, 0.1, 0.214, 0.068], respectively for encoder linear layers, encoder convolutional layers, decoder linear layers and decoder convolutional layers.
+
+  The best net is then obtained by training with this hyperparameters in a 5 fold setup and choosing the one with the smallest validation loss
+
+\subsection{Denoising autoencoder}
+
+\subsection{Supervised fine-tuning}
+
+\subsection{Visualization techniques}
+
+
+\section{GAN}
+
+
+
+
+
+
+
+
+
+
 
 
 
