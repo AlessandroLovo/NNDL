@@ -29,15 +29,29 @@
 
     As we can see from fig \ref{fig:basic} there is no definite convergence, as the loss slowly keeps decreasing, moreover training and validation loss are virtually identical, showing there is no overfitting.
 
+    % \begin{figure}
+    %   \centering
+    %   \subfloat[]{\includegraphics[width=0.4\textwidth]{img/basic_loss.png}} \,
+    %   \subfloat[]{\includegraphics[width=0.4\textwidth]{img/basic/epoch_20.png}} \\
+    %   \subfloat[]{\includegraphics[width=0.4\textwidth]{img/basic/epoch_51.png}} \,
+    %   \subfloat[]{\includegraphics[width=0.4\textwidth]{img/basic/epoch_98.png}}
+    %   \caption{Behavior of training and validation loss during learning and some examples of original versus reconstructed images (at epochs 20, 51 and 98).}
+    %   \label{fig:basic}
+    % \end{figure}
+
     \begin{figure}
       \centering
-      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/basic_loss.png}} \,
-      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/basic/epoch_20.png}} \\
-      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/basic/epoch_51.png}} \,
-      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/basic/epoch_98.png}}
-      \caption{Behavior of training and validation loss during learning and some examples of original versus reconstructed images (at epochs 20, 51 and 98).}
+      \begin{tabular}{cc}
+        \multirow{2}{*}[2.4cm]{\includegraphics[width=0.55\textwidth]{img/basic_loss.png}}
+        & \includegraphics[width=0.3\textwidth]{img/basic/epoch_20.png} \\
+        & \includegraphics[width=0.3\textwidth]{img/basic/epoch_98.png} \\
+
+      \end{tabular}
+      \caption{Behavior of training and validation loss during learning and some examples of original versus reconstructed images (at epochs 20 and 98).}
       \label{fig:basic}
     \end{figure}
+
+
 
   \subsection{More advanced methods}
     In the basic example we witnessed a pretty slow convergence to pretty mediocre results: to improve both speed and reconstruction error one needs better architectures and training methods. First of all instead of the MSE loss it is better to use the Binary Cross Entropy (BCE) loss; then I also implemented early stopping, checkpointing the nets back to when the validation loss was at its minimum if after \emph{patience} epochs the validation loss didn't reach a new minimum. At this point I tried more advanced strategies:
@@ -70,11 +84,12 @@
 
     \begin{figure}
       \centering
-      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/best_loss.png}} \,
-      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/best/epoch_5.png}} \\
-      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/best/epoch_64.png}} \,
-      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/best/epoch_92.png}}
-      \caption{Behavior of training and validation loss during learning of the best net and some examples of original versus reconstructed images (at epochs 5, 64 and 92). Thanks to the BCE loss the reconstructed images are far less blurred than the ones of the basic autoencoder.}
+      \begin{tabular}{cc}
+        \multirow{2}{*}[2.4cm]{\includegraphics[width=0.55\textwidth]{img/best_loss.png}}
+        & \includegraphics[width=0.3\textwidth]{img/best/epoch_5.png} \\
+        & \includegraphics[width=0.3\textwidth]{img/best/epoch_92.png} \\
+      \end{tabular}
+      \caption{Behavior of training and validation loss during learning of the best net and some examples of original versus reconstructed images (at epochs 5 and 92). Thanks to the BCE loss the reconstructed images are far less blurred than the ones of the basic autoencoder.}
       \label{fig:best}
     \end{figure}
 
@@ -113,10 +128,10 @@
     \begin{figure}
       \centering
       \subfloat[]{\includegraphics[width=0.4\textwidth]{img/denoising_cfr.png}} \,
-      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/perlin_hallucination.png}} \\
-      \subfloat[]{\includegraphics[width=0.4\textwidth]{img/uniform0.7_hallucination.png}} \,
+      % \subfloat[]{\includegraphics[width=0.4\textwidth]{img/perlin_hallucination.png}} \\
+      % \subfloat[]{\includegraphics[width=0.4\textwidth]{img/uniform0.7_hallucination.png}} \,
       \subfloat[]{\includegraphics[width=0.4\textwidth]{img/uniform2_hallucination.png}}
-      \caption{In all images 'Rec image' is the one reconstructed by the best autoencoder with no denoising additional training, while 'Rec image d' is the one reconstructed by the autoencoder trained against URN(2) + SNP(0.1). (a): The denoising autoencoder manages to correctly reconstruct the noisy image, while the simple one fails. Also the simple one is more prone to 'hallucinations', i.e. seeing digits in pure noise (c, d.), however when fed Perlin noise (which wasn't trained aginst), it hallucinates as well.}
+      \caption{'Rec image' is the one reconstructed by the best autoencoder with no denoising additional training, while 'Rec image d' is the one reconstructed by the autoencoder trained against URN(2) + SNP(0.1). The denoising autoencoder manages to correctly reconstruct the noisy image, while the simple one fails (a). Also the simple one is more prone to 'hallucinations', i.e. seeing digits in pure noise (b).}
       \label{fig:hallucination}
     \end{figure}
 
@@ -147,6 +162,7 @@
       \centering
       \subfloat[basic AE]{\includegraphics[width=0.4\textwidth]{img/basic_tsne.png}} \,
       \subfloat[best AE]{\includegraphics[width=0.4\textwidth]{img/best_tsne.png}} \\
+      \vspace{-0.4cm}
       \subfloat[denoising AE]{\includegraphics[width=0.4\textwidth]{img/denoising_tsne.png}} \,
       \subfloat[fine-tuned AE]{\includegraphics[width=0.4\textwidth]{img/fine-tuned_tsne.png}}
       \caption{2 components TSNE representation of the latent space of different nets.}
@@ -154,9 +170,29 @@
     \end{figure}
 
 
-
-
 \section{GAN}
+  I tried different types of Generative Adversarial Networks, using slight variations of the best encoder and decoder architectures respectively for the discriminator and generator. In every case real data have a real label and fake images a fake one: the discriminator is trained to correctly distinguish between the two, while the generator descends the gradient of the loss of the discriminator once provided generated fake images, but this time with the real label. Also in every case I implemented the possibility of updating generator and discriminator respectively every $u_g, u_d$ batches, in order to properly synchronize the training and try to avoid bad equilibria.
+  \begin{itemize}
+    \item \textbf{Simple GAN}: the discriminator has a single output neuron followed by a sigmoid: fake data are labeled with 0 and real ones with 1 and the loss function is the Binary Cross Entropy.
+    \item \textbf{Wasserstein GAN (WGAN)}: instead of classifying the images, the discriminator scores them with a real number that is higher the more real it thinks the image is. At every step of training the weights of the discriminator are clipped, otherwise it will quickly converge to a bad equilibrium in which it gives scores of the order of $10^7$ and learning stops.
+    \item \textbf{Auxiliary Classifier GAN (ACGAN)}: The discriminator has 11 output neurons corresponding to the classes [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, fake] and is trained with the Cross Entropy Loss. The generator has an initial embedding layer taking as input one the valid classes, then a gaussian noise is summed to the output of the embedding layer to provide variability.
+  \end{itemize}
+
+  The first two types of GAN were incredibly difficult to train and yielded extremely bad results (generated image were white blobs in the best case). On the other hand the ACGAN was able to produce something good. I think this is due to the fact that in the first cases the discriminator has simply to distinguish between real and fake images, and this is a too easy task given the terrible output of the generator; at this point the gradient vanishes when updating the generator and so learning stops. On the other hand in the ACGAN the discriminator has also to discriminate between the real 10 classes of digits and so it doesn't stop learning immediately. Anyways, even in this case the quality of the generated images is pretty low, but most importantly there is virtually no variability in the images, exhibiting a sort of mode collapse.
+
+  \begin{figure}
+    \centering
+    \subfloat[]{\includegraphics[width=0.45\textwidth]{img/wgan_loss3.png}} \quad
+    \subfloat[]{\includegraphics[width=0.45\textwidth]{img/acgan_auto_sync_loss.png}} \\
+    \subfloat[]{\includegraphics[width=0.3\textwidth]{img/wgan_generation3.png}} \quad
+    \subfloat[]{\includegraphics[width=0.6\textwidth]{img/acgan_auto_sync_generation.png}}
+    \caption{Losses for generator and discriminator and some generated images for a WGAN (a, c) with $u_g = 5, u_d = 1$ and an ACGAN (b, d) where $u_g, u_d$ are actively tuned during training in order to keep the losses of generator and discriminator as close as possible. On top of the WGAN generated images there is the score given by the discriminator, while for the ACGAN the class is reported; in particular we can see that the generator managed to fool the discriminator for every digit apart the 6.}
+    \label{fig:GAN}
+  \end{figure}
+
+
+
+
 
 
 
