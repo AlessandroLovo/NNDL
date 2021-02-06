@@ -1,0 +1,3 @@
+#!bin/sh
+
+jupyter-notebook --NotebookApp.allow_origin='https://colab.research.google.com' --port=9090 --NotebookApp.port_retries=0 --no-browser
