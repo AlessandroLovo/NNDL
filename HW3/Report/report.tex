@@ -10,8 +10,30 @@
 \maketitle
 
 \section{Introduction}
+  This homework will deal with Reinforcement learning using \emph{OpenAI}'s \emph{gym} environments. In particular we will start with the simple \emph{CartPole}, where the goal for the agent is to balance a pole on a cart, first providing the agent with high level knowledge of the environment, then giving it just the screen pixels. Then another gym environment will be tested. In every case the goal is to consistently beat the games with as few training episodes as possible.
+
+  \subsection{General framework}
+    The interaction between the environment and the agent and learning of the latter rely on the following framework of python classes and functions:
+    \begin{itemize}
+      \item \textbf{Policy net}: different architectures for deep neural networks taking as input the state of the environment and providing as output the Q-values for each possible actions.
+      \item \textbf{Policy}: function for choosing which action to take given the Q-values and a generic parameter $\beta$. The possible policies are:
+      \emph{random} (choose action randomly, ignoring the Q-values), \emph{greedy} (choose the action with the highest Q-value), \emph{$\epsilon$-greedy} (with probability $\epsilon$ choose a non optimal action, otherwise the greedy one; here $\beta$ is $\epsilon$), \emph{softmax} (here $\beta$ is the temperature parameter and the probability of choosing action $a$ is proportional to $e^{q_a/\beta}$). Both \emph{$\epsilon$-greedy} and \emph{softmax} policies reduce to the \emph{greedy} one whe $\beta = 0$.
+      \item \textbf{Agent}: class for handling the interaction with the environment: it observes the state of the environment, passes it to the \emph{policy net} obtaining the Q-values, which uses, given a \emph{policy} to choose the action to take and pass back to the environment, receiving a reward and the next state.
+      \item \textbf{Replay memory}: class containing a list of finite capacity with tuples [state, action, next state, reward] from which we randomly sample when training the agent. Once we reach the maximum capacity new data will overwrite the oldest ones.
+      \item \textbf{Exploration profile}: class for scheduling the value of the $\beta$ parameter for the policy of the agent at every episode of training. Said value can either be predetermined, i.e. an exponential decay with the episode number, or depend on the current performance of the agent.
+      \item \textbf{Evolver}: class for handling the training of the \emph{policy net} of the \emph{Agent}. It optimizes the smooth L1 loss between  $policy\_net(state, action)$ and $reward + \gamma \cdot target\_net(next\, state, best\, action)$ where $\gamma$ is the discount rate and the target net is a periodic checkpoint of the policy net. Data [state, action, next state, reward] are sampled from the \emph{replay memory} and the best action is computed using the greedy policy on the target net.
+    \end{itemize}
+
 
 \section{Cart-Pole}
+  This environment consist of a cart able to move on a 1d rail with a pole attached, initially facing upwards. The state consists of four real numbers: cart position ($x$), cart velocity ($v$), pole angle ($\theta$), pole angular velocity ($\omega$) and the agent has two available actions: push the cart to the right or to the left. The goal is to keep the pole from falling (angle less then 12 degrees) and the cart on screen for 500 steps.
+
+  In the vanilla version at every step the agent receives a reward $r = 1$ until the pole falls, so the agent struggles to understand the consequence of its actions and learning is pretty slow, so I proceeded in modifying the reward as $r = 1 + w_x |x|^{e_x} + w_\theta |\theta|^{e_\theta}$ basically suggesting to the agent that it needs to keep the pole vertical and the cart in the center of the screen. I programmed to stop the learning process when the agent beats the game for ten consecutive episodes.
+
+  I tried tuning manually the hyperparameters using the softmax policy with an exponentially decaying temperature. With the modified reward the results were better, but there was still a lot of margin for improvement, so I tried more exotic exploration profiles: for example a wavy profile with the idea of having a region of low temperature quite early to see if the agent had already learned well but was held from achieving a perfect score by the 'thermal noise'.
+  Then I tried to set the temperature during training according to score of the agent, i.e. $\beta = \beta_0 e^{-S/\csi}$ where $S$ is the average score of the agent in the last $N$ episodes
+
+
 
 \section{Cart-Pole with screen pixels}
 
