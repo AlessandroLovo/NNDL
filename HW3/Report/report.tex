@@ -26,12 +26,41 @@
 
 
 \section{Cart-Pole}
-  This environment consist of a cart able to move on a 1d rail with a pole attached, initially facing upwards. The state consists of four real numbers: cart position ($x$), cart velocity ($v$), pole angle ($\theta$), pole angular velocity ($\omega$) and the agent has two available actions: push the cart to the right or to the left. The goal is to keep the pole from falling (angle less then 12 degrees) and the cart on screen for 500 steps.
+  This environment consist of a cart able to move on a 1d rail with a pole attached, initially facing upwards. The state consists of four real numbers: cart position ($x$), cart velocity ($v$), pole angle ($\theta$), pole angular velocity ($\omega$) and the agent has two available actions: push the cart to the right or to the left. The game ends when the pole falls ($|\theta| > 12°$) or the cart goes out of screen ($|x| > 2.4$). The score of the agent is the number of steps until game termination and the game is considered beaten when the score reaches 500.
 
-  In the vanilla version at every step the agent receives a reward $r = 1$ until the pole falls, so the agent struggles to understand the consequence of its actions and learning is pretty slow, so I proceeded in modifying the reward as $r = 1 + w_x |x|^{e_x} + w_\theta |\theta|^{e_\theta}$ basically suggesting to the agent that it needs to keep the pole vertical and the cart in the center of the screen. I programmed to stop the learning process when the agent beats the game for ten consecutive episodes.
+  I started testing a model that uses as policy net a fully connected network with [4, 128, 128, 2] neurons and hyperbolic tangent as activation function, with the softmax policy and trained with the SGD optimizer with learning rate $10^{-2}$ and a batch size of 128. Learning stops when the agent beats the game for 10 consecutive episodes.
 
-  I tried tuning manually the hyperparameters using the softmax policy with an exponentially decaying temperature. With the modified reward the results were better, but there was still a lot of margin for improvement, so I tried more exotic exploration profiles: for example a wavy profile with the idea of having a region of low temperature quite early to see if the agent had already learned well but was held from achieving a perfect score by the 'thermal noise'.
-  Then I tried to set the temperature during training according to score of the agent, i.e. $\beta = \beta_0 e^{-S/\csi}$ where $S$ is the average score of the agent in the last $N$ episodes
+  In the vanilla version at every step the agent receives a reward $r = 1$ until the pole falls, so the agent struggles to understand the consequence of its actions and learning is pretty slow and very dependent on the initialization of the net: running twice the learning with same hyperparameters can yield very different results. One of them is the one in fig \ref{fig:scores} (a) and an example of the behavior of the so trained agent is in \url{code/vanilla2.mp4}.
+
+  To improve the results and speed up learning I proceeded in modifying the reward as $r = 1 + w_x |x|^{e_x} + w_\theta |\theta|^{e_\theta}$ basically suggesting to the agent that it needs to keep the pole vertical and the cart in the center of the screen.
+  With the modified reward the results were better (fig \ref{fig:scores} (b) and \url{code/mod_r_cv.mp4} where the pole barely oscillates at all), but there was still a lot of margin for improvement in terms of learning speed.
+
+  So I tried more exotic exploration profiles: for example a wavy profile (fig \ref{fig:scores} (c)) with the idea of having a region of low temperature quite early to see if the agent had already learned well but was held from achieving a perfect score by the 'thermal noise'.
+  Then I tried to set the temperature during training according to the score of the agent, i.e. $\beta = \max(\beta_0 e^{-S/\xi}, 10^{-8})$ where $S$ is the average score of the agent in the last $N$ episodes, approach which proved very promising. At this point I used \emph{optuna} to minimize the number of episodes of learning to consistently beat the game optimizing the following hyperparameters:
+
+  \begin{itemize}
+    \item Number of hidden layers for the policy net (2 or 3) and number of neurons per layer (from 16 to 256)
+    \item Policy (epsilon greedy or softmax)
+    \item optimizer learning rate (from $10^{-4}$ to 1) and batch size (from 64 to 512)
+    \item $\gamma$ (from 0.3 to 1)
+    \item $w_x$ (from -2 to 0), $e_x$ (from 1 to 3), $w_\theta$ (from -8 to 0), $e_\theta$ (from 1 to 3)
+    \item Number of episodes every which to update the target net (from 3 to 20)
+    \item $\beta_0$ (from 0.01 to 1), $\xi$ (from 10 to 100), $N$ (from 5 to 200)
+  \end{itemize}
+
+  After 50 trials the best result had hidden layers with [69, 219] neurons, softmax policy, learning rate of 0.163 and batch size of 181, $\gamma = 0.915, w_x=-1.42, e_x=2, w_\theta=-7.06, e_\theta=1, \beta_0=0.186, \xi=10.1, N=18$ and updating the target net every 10 episodes. With this hyperparameters the game was beaten just after 147 episodes of training (fig \ref{fig:scores} (d), \url{code/best.mp4}) and I tested the final agent with the greedy policy over 100 episodes obtaining an average score of 491.2, 95 perfect scores with a maximum combo of 37 consecutive ones.
+
+  \begin{figure}
+    \centering
+    \subfloat[Vanilla]{\includegraphics[width=0.45\textwidth]{img/vanilla2.png}} \quad
+    \subfloat[$w_x=-0.2, e_x=4, w_\theta=-5, e_\theta=4$]{\includegraphics[width=0.45\textwidth]{img/mod_r_cv.png}} \\
+    \subfloat[Wavy]{\includegraphics[width=0.45\textwidth]{img/wavy3.png}} \quad
+    \subfloat[Best]{\includegraphics[width=0.45\textwidth]{img/best.png}}
+    \caption{Behavior of the agent score and the softmax temperature during learning for four different cases.}
+    \label{fig:scores}
+  \end{figure}
+
+
 
 
 
