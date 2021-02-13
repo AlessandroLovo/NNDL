@@ -26,9 +26,9 @@
 
 
 \section{Cart-Pole}
-  This environment consist of a cart able to move on a 1d rail with a pole attached, initially facing upwards. The state consists of four real numbers: cart position ($x$), cart velocity ($v$), pole angle ($\theta$), pole angular velocity ($\omega$) and the agent has two available actions: push the cart to the right or to the left. The game ends when the pole falls ($|\theta| > 12°$) or the cart goes out of screen ($|x| > 2.4$). The score of the agent is the number of steps until game termination and the game is considered beaten when the score reaches 500.
+  This environment consist of a cart able to move on a 1d rail with a pole attached, initially facing upwards. The state consists of four real numbers: cart position ($x$), cart velocity ($v$), pole angle ($\theta$), pole angular velocity ($\omega$) and the agent has two available actions: push the cart to the right or to the left. The game ends when the pole falls ($|\theta| > 12^{\circ}$) or the cart goes out of screen ($|x| > 2.4$). The score of the agent is the number of steps until game termination and the game is considered beaten when the score reaches 500.
 
-  I started testing a model that uses as policy net a fully connected network with [4, 128, 128, 2] neurons and hyperbolic tangent as activation function, with the softmax policy and trained with the SGD optimizer with learning rate $10^{-2}$ and a batch size of 128. Learning stops when the agent beats the game for 10 consecutive episodes.
+  I started testing a model that uses as policy net a fully connected network with [4, 128, 128, 2] neurons and hyperbolic tangent as activation function, with the softmax policy and trained with the SGD optimizer with learning rate $10^{-2}$ and a batch size of 128. Learing starts when there are at least 1000 samples in the replay memory (which has maximum capacity of 10000 samples) and it stops when the agent beats the game for 10 consecutive episodes.
 
   In the vanilla version at every step the agent receives a reward $r = 1$ until the pole falls, so the agent struggles to understand the consequence of its actions and learning is pretty slow and very dependent on the initialization of the net: running twice the learning with same hyperparameters can yield very different results. One of them is the one in fig \ref{fig:scores} (a) and an example of the behavior of the so trained agent is in \url{code/vanilla2.mp4}.
 
@@ -61,10 +61,29 @@
   \end{figure}
 
 
-
-
-
 \section{Cart-Pole with screen pixels}
+  Dealing with the screen pixels is much harder than with the high level information provided to the agent so far and so to achieve good results relatively quickly one has to use more advanced methods.
+
+  First of all the images are 3 channels rgb pictures of $600 \times 400$ pixels. The raw images are very heavy both to store in the replay memory and to process by the agent's policy net and also contain a lot of white space, so I proceeded to crop them (between 100 and 500 on the x axis and between 160 and 320 on the y axis), converted them to gray scale using only the blue channel (the one with the higher contrast), making the negative (as to have most of the pixels black, i.e. with value 0) and then downsampling the y axis, i.e. keeping only one row of pixel every 6 of them (fig \ref{fig:pixels} (a)).
+  Also, since from a single picture there is no way of telling the velocity of the cart or of the pole, I provided the agent with four consecutive frames. So the resulting input for the policy net of the agent are tensors of shape $4 \times 27 \times 400$. To speed up the computations every time an image is saved in the replay memory, it is saved directly as a GPU tensor (and every sample contains 8 images: four for the 'state' and four for the 'next state'). For this reason I had to limit the replay memory capacity to 4000 samples.
+
+  The policy network is now a convolutional network: I tried manually playing with its parameters and finally settled on three convolutional layers with [16,32,16] channels, kernel size of 4, stride of 2 and padding of 0, followed by a single hidden linear layer with 256 neurons and finally the output layer with 2 neurons. I also used the modified reward as previously taking $x$ and  $\theta$ from the original high level state of the environment, adding a -10 penalty to the reward when the pole falls. This time the optimization was performed using the RMSProp optimizer with learining rate $3\cdot10^{-4}$, a batch size 32 and updating the target net every 5 episodes. The exploration profile for the softmax temperature was the same 'interactive' one used for the best agent before with the only difference to set the temperature to 0 instead of $10^{-8}$ when the computed value is below $10^{-9}$.
+
+  In general I observed that the agent managed to perform quite well, beating the game but not consistently, however as training proceeded the score got bad again. I think this is due to the limited size of the replay memory, so as the agent becomes good the memory contains mostly images in which the pole is almost vertical. This way when we perform gradient descent we overfit the region of the input space where the pole is vertical losing precision on the rest of the space. At this point when the agent finds itself in a critical situation (pole slightly tilted), its policy net no longer predicts the correct Q-values and so it takes the wrong decision, letting the pole fall.
+
+  To counteract this effect I stopped learning when the agent successfully beats the game for 5 consecutive times (no more 10), but most importantly new samples are pushed to the replay memory only if the score of the previous episode was below 350. This method (which I called PINO (Push If Not Over)) worked very well (fig \ref{fig:pixels} (b), \url{code/pino2.mp4}), and after 314 episodes of training I tested the agent at zero temperature over 100 episodes obtaining 94 perfect scores with a best combo of 39 consecutive ones and an average score of 480, results which are comparable with the best agent using the high level information.
+
+  Before reaching this result I tried other techniques such as pushing to the memory every $n$ frames or letting the agent choose a new action every $n$ frames, repeating the previous one when not deciding, as well as trying different preprocessing on the images; however none of them showed particularly promising results.
+
+  \begin{figure}
+    \centering
+    \subfloat[Original and preprocessed image]{\includegraphics[width=0.4\textwidth]{img/preprocessing3.png}} \quad
+    \subfloat[Trainng of the PINO agent]{\includegraphics[width=0.5\textwidth]{img/pino2.png}}
+    \caption{}
+    \label{fig:pixels}
+  \end{figure}
+
+
 
 \section{Other gym env}
 
